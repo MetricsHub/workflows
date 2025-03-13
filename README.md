@@ -121,7 +121,7 @@ The SSH daemon prevents the build from completing, and wait for the user to open
 
 ## Maven Central Deploy
 
-The `maven-central-deploy.yml` workflow builds a Maven project and *deploys* its artifacts to [Sonatype's OSSRH SNAPSHOT repository](https://s01.oss.sonatype.org/content/repositories/snapshots/). It is designed to be invoked on `push` on the `main` branch of the repository, so the **SNAPSHOT** version built from the `main` branch can be used by other projects as a dependency. Basically, the project is built with the `mvn deploy` command.
+The `maven-central-deploy.yml` workflow builds a Maven project and *deploys* its artifacts to [Maven Central](https://central.sonatype.org/publish/publish-portal-maven/). It is designed to be invoked on `push` on the `main` branch of the repository, so the **SNAPSHOT** version built from the `main` branch can be used by other projects as a dependency. Basically, the project is built with the `mvn deploy` command.
 
 > [!IMPORTANT]
 > This workflow is **NOT** designed to deploy release versions of the artifact to Maven Central repositories, as it doesn't fulfill the requirements for Maven Central (signatures, etc.).
@@ -130,23 +130,12 @@ The workflow also updates the dependency tree for [dependabot](https://docs.gith
 
 ### Requirements
 
-Sonatype's OSSRH repositories must be [specified in the `<distributionManagement>` section of the project's `pom.xml`](https://maven.apache.org/pom.html#repository), with `<id>ossrh</id>`:
-
-```xml
- <distributionManagement>
-  <snapshotRepository>
-   <id>ossrh</id>
-   <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-  </snapshotRepository>
- </distributionManagement>
-```
-
 The below secrets must be declared in the repository or the GitHub organization:
 
 | Secret | Description |
 |---|---|
-| `OSSRH_USERNAME` | Username to connect to [Sonatype's Nexus Repository Manager](https://s01.oss.sonatype.org) |
-| `OSSRH_TOKEN` | The corresponding token obtained from Sonatype |
+| `MAVEN_CENTRAL_USERNAME` | Username to connect to [Maven Central Repository](https://central.sonatype.com) |
+| `MAVEN_CENTRAL_TOKEN` | The corresponding token obtained from Sonatype |
 
 ### Inputs
 
@@ -157,7 +146,7 @@ The below secrets must be declared in the repository or the GitHub organization:
 
 ### How to use it?
 
-To use this workflow, you must define a `job` that `uses: sentrysoftware/workflows/.github/workflows/maven-central-deploy.yml@main`.
+To use this workflow, you must define a `job` that `uses: metricshub/workflows/.github/workflows/maven-central-deploy.yml@main`.
 
 > [!IMPORTANT]
 > Instead of `@main`, it is recommended to use an actual version, to avoid breaking your build if the workflow required inputs change in the future, like `@v1`.
@@ -173,7 +162,7 @@ on:
 
 jobs:
   deploy:
-    uses: sentrysoftware/workflows/.github/workflows/maven-central-deploy.yml@main
+    uses: metricshub/workflows/.github/workflows/maven-central-deploy.yml@main
     with:
       jdkVersion: "17"
       nodeVersion: "20.x"
@@ -182,7 +171,7 @@ jobs:
 
 ## Maven Central Release
 
-The `maven-central-release.yml` workflow performs all the necessary actions to release a Maven project to [Sonatype's OSSRH release repository](https://s01.oss.sonatype.org/content/groups/public/), which is available in Maven Central.
+The `maven-central-release.yml` workflow performs all the necessary actions to release a Maven project to [Maven Central](https://central.sonatype.com), which is available in Maven Central.
 
 This workflow **must** be triggered manually and run from the `main` branch of the project, and will perform the below actions:
 
@@ -213,21 +202,10 @@ The below secrets must be declared in the GitHub repository or the GitHub organi
 
 | Secret | Description |
 |---|---|
-| `OSSRH_USERNAME` | Username to connect to [Sonatype's Nexus Repository Manager](https://s01.oss.sonatype.org) |
-| `OSSRH_TOKEN` | The corresponding token obtained from Sonatype |
+| `MAVEN_CENTRAL_USERNAME` | Username to connect to [Sonatype's Nexus Repository Manager](https://s01.oss.sonatype.org) |
+| `MAVEN_CENTRAL_TOKEN` | The corresponding token obtained from Sonatype |
 | `MAVEN_GPG_PRIVATE_KEY` | The GPG private key to [sign the artifacts](https://central.sonatype.org/publish/requirements/gpg/) |
 | `MAVEN_GPG_PASSPHRASE` | The associated passphrase |
-
-Sonatype's OSSRH repositories must be [specified in the `<distributionManagement>` section of the project's `pom.xml`](https://maven.apache.org/pom.html#repository), with `<id>ossrh</id>`:
-
-```xml
- <distributionManagement>
-  <repository>
-   <id>ossrh</id>
-   <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-  </repository>
- </distributionManagement>
-```
 
 Additionally, the `pom.xml` must declare a `release` [profile](https://maven.apache.org/guides/introduction/introduction-to-profiles.html), to declare a few custom phases for the release, as below:
 
@@ -260,19 +238,6 @@ Additionally, the `pom.xml` must declare a `release` [profile](https://maven.apa
         </configuration>
        </execution>
       </executions>
-     </plugin>
-
-     <!-- nexus-staging (Sonatype) -->
-     <plugin>
-      <groupId>org.sonatype.plugins</groupId>
-      <artifactId>nexus-staging-maven-plugin</artifactId>
-      <version>1.6.13</version>
-      <extensions>true</extensions>
-      <configuration>
-       <serverId>ossrh</serverId>
-       <nexusUrl>https://s01.oss.sonatype.org</nexusUrl>
-       <autoReleaseAfterClose>${env.AUTO_RELEASE_AFTER_CLOSE}</autoReleaseAfterClose>
-      </configuration>
      </plugin>
 
      <!-- release -->
@@ -309,7 +274,7 @@ Additionally, the `pom.xml` must declare a `release` [profile](https://maven.apa
 
 ### How to Use It?
 
-To use this workflow, you must define a `job` that `uses: sentrysoftware/workflows/.github/workflows/maven-central-release.yml@main`.
+To use this workflow, you must define a `job` that `uses: metricshub/workflows/.github/workflows/maven-central-release.yml@main`.
 
 > [!IMPORTANT]
 > Instead of `@main`, it is recommended to use an actual version, to avoid breaking your build if the workflow required inputs change in the future, like `@v1`.
@@ -334,7 +299,7 @@ on:
 
 jobs:
   release:
-    uses: sentrysoftware/workflows/.github/workflows/maven-central-release.yml@main
+    uses: metricshub/workflows/.github/workflows/maven-central-release.yml@main
     with:
       releaseVersion: ${{ inputs.releaseVersion }}
       developmentVersion: ${{ inputs.developmentVersion }}
@@ -353,7 +318,7 @@ The workflow performs several builds (so it may take some time to complete).
 
 If the workflow completes successfully, you will need to perform 2 additional tasks:
 
-1. Login to [Sonatype's Nexus Repository Manager](https://s01.oss.sonatype.org), and **Release** the *staging repository* that has been created by the workflow (the exact name of the repository is listed in the workflow summary). This operation has already been performed if the workflow was called with `autoRelease: true`.
+1. Login to [Maven Central](https://central.sonatype.com), and **Release** the *staging repository* that has been created by the workflow (the exact name of the repository is listed in the workflow summary). This operation has already been performed if the workflow was called with `autoRelease: true`.
 2. Approve and merge the Pull Request that has been created by the workflow (for the `release/vX.Y.Z` branch)
 
 ### Troubleshooting
