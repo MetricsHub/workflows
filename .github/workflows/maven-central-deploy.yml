@@ -1,0 +1,68 @@
+# Build with Maven and deploy to Maven Central
+#
+# This is not a release workflow, use it to deploy a SNAPSHOT
+# version of your project.
+#
+# Call this workflow on push to the base branch.
+#
+# Requirements:
+#
+# - MAVEN_CENTRAL_USERNAME secret (at the repository or organization level)
+# - MAVEN_CENTRAL_TOKEN secret
+
+name: Maven Deploy to Maven Central
+
+on:
+  workflow_call:
+    inputs:
+      jdkVersion:
+        type: string
+        description: "Version of the JDK to setup and use"
+        required: false
+        default: "17"
+      nodeVersion:
+        type: string
+        description: "Version of Node.js to setup and use (if needed)"
+        required: false
+        default: ""
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK ${{ inputs.jdkVersion }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.jdkVersion }}
+        distribution: temurin
+        cache: maven
+
+    - name: Set up Maven settings.xml
+      uses: s4u/maven-settings-action@v3.0.0
+      with:
+        servers: '[{"id": "central", "username": "${env.MAVEN_CENTRAL_USERNAME}", "password": "${env.MAVEN_CENTRAL_TOKEN}"}]'
+        sonatypeSnapshots: true
+
+    - name: Setup Node.js ${{ inputs.nodeVersion }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.nodeVersion }}
+        cache: npm
+      if: ${{ inputs.nodeVersion != '' }}
+
+    - name: Build and deploy to Maven Central
+      run: mvn -B deploy --file pom.xml
+      env:
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+        
+    # Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
+    - name: Update dependency graph
+      uses: advanced-security/maven-dependency-submission-action@fcd7eab6b6d22946badc98d1e62665cdee93e0ae

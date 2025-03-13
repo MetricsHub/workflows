@@ -1,0 +1,62 @@
+name: Maven Build
+
+on:
+  workflow_call:
+    inputs:
+      mavenPhases:
+        type: string
+        description: "Maven phases to execute"
+        required: false
+        default: "verify site"
+      jdkVersion:
+        type: string
+        description: "Version of the JDK to setup and use"
+        required: false
+        default: "17"
+      nodeVersion:
+        type: string
+        description: "Version of Node.js to setup and use (if needed)"
+        required: false
+        default: ""
+      debug:
+        type: string
+        description: "Enable Maven debug"
+        required: false
+        default: "false"
+      ssh:
+        type: string
+        description: "Enable SSH session to the runner"
+        required: false
+        default: "false"
+      uploadCheckstyleReport:
+        type: string
+        description: "Enable the upload of any Checkstyle report created by Maven"
+        default: "true"
+      uploadPMDReport:
+        type: string
+        description: "Enable the upload of any PMD report created by Maven"
+        default: "true"
+      uploadSpotbugsReport:
+        type: string
+        description: "Enable the upload of any Spotbugs report created by Maven"
+        default: "true"
+
+permissions:
+  # This is required for report upload
+  checks: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    uses: sentrysoftware/workflows/.github/workflows/maven-build.yml@main
+    with:
+      mavenPhases: ${{ inputs.mavenPhases }}
+      jdkVersion: ${{ inputs.jdkVersion }}
+      nodeVersion: ${{ inputs.nodeVersion }}
+      debug: ${{ inputs.debug }}
+      ssh: ${{ inputs.ssh }}
+      uploadCheckstyleReport: ${{ inputs.uploadCheckstyleReport }}
+      uploadPMDReport: ${{ inputs.uploadPMDReport }}
+      uploadSpotbugsReport: ${{ inputs.uploadSpotbugsReport }}
+    secrets: inherit

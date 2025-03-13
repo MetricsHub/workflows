@@ -1,0 +1,31 @@
+# Action to build the project site with Maven and deploy to GitHub Pages
+
+name: Build and Deploy Maven Site to GitHub Pages
+
+on:
+  workflow_call:
+    inputs:
+      jdkVersion:
+        type: string
+        description: "Version of the JDK to setup and use"
+        required: false
+        default: "17"
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build the site with Maven
+  build:
+    uses: sentrysoftware/workflows/.github/workflows/maven-site-deploy.yml@main
+    with:
+      jdkVersion: ${{ inputs.jdkVersion }}

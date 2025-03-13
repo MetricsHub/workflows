@@ -1,0 +1,231 @@
+# Fully automated release to Maven Central
+#
+# This workflow performs the following operations:
+#
+# - Create a release branch
+# - Prepare the release with Maven
+# - Perform the release to Maven Central
+# - Upload Maven Site to GitHub Pages
+# - Publish the packages as a GitHub Release
+# - Create a Pull Request to prepare next development version
+#
+# Requires the below secrets to be defined (workspace or organization):
+#
+# - MAVEN_GPG_PRIVATE_KEY
+# - MAVEN_GPG_PASSPHRASE
+# - MAVEN_CENTRAL_USERNAME
+# - MAVEN_CENTRAL_TOKEN
+
+name: Release to Maven Central
+run-name: Release v${{ inputs.releaseVersion }} to Maven Central
+
+on:
+  workflow_call:
+    inputs:
+      releaseVersion:
+        type: string
+        description: "Release version"
+        required: true
+        default: ""
+      developmentVersion:
+        type: string
+        description: "New SNAPSHOT version"
+        required: true
+        default: ""
+      autoRelease:
+        type: boolean
+        description: "Release staging repository immediately?"
+        required: false
+        default: false
+      jdkVersion:
+        type: string
+        description: "Version of the JDK to setup and use"
+        required: false
+        default: "17"
+      nodeVersion:
+        type: string
+        description: "Version of Node.js to setup and use (if needed)"
+        required: false
+        default: ""
+        
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these releases and deployments to complete.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+# Default to bash
+defaults:
+  run:
+    shell: bash
+    
+jobs:
+  release:
+    name: Release v${{ inputs.releaseVersion }}
+    
+    runs-on: ubuntu-latest
+
+    outputs:
+      branchName: ${{ env.branchName }}
+    
+    steps:
+    
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK ${{ inputs.jdkVersion }} with Maven Central Repository
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.jdkVersion }}
+        distribution: temurin
+        java-package: jdk
+        cache: maven
+        server-id: central
+        server-username: MAVEN_CENTRAL_TOKEN
+        server-password: MAVEN_CENTRAL_USERNAME
+        gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+        gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+    - name: Setup Node.js ${{ inputs.nodeVersion }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.nodeVersion }}
+        cache: npm
+      if: ${{ inputs.nodeVersion != '' }}
+
+    - name: Setup GitHub Pages
+      id: pages
+      uses: actions/configure-pages@v4
+      with:
+        enablement: true
+    
+    - name: Configure Git User
+      run: |
+        git config user.email "actions@github.com"
+        git config user.name "GitHub Actions"
+    
+    - name: Set release branch and tag name
+      run: |
+        echo "branchName=release/v$INPUT_RELEASEVERSION" >> $GITHUB_ENV
+        echo "tagName=v$INPUT_RELEASEVERSION" >> $GITHUB_ENV
+      env:
+        INPUT_RELEASEVERSION: ${{ inputs.releaseVersion }}
+
+    - name: Create ${{ env.branchName }} branch
+      run: |
+        git checkout ${{ env.branchName }} 2>/dev/null || git checkout -b ${{ env.branchName }}
+        git push --force origin ${{ env.branchName }}
+
+    - name: Clean up existing ${{ env.tagName }} tags
+      run: |
+        git tag -d ${{ env.tagName }} || true
+        git push origin :refs/tags/${{ env.tagName }} || true
+
+    - name: Prepare release
+      id: prepare
+      run: |
+        mvn -B -U \
+          -Prelease \
+          release:clean \
+          release:prepare \
+          -DpreparationGoals="clean verify site" \
+          -Dgpg.passphraseServerId=gpg.passphrase \
+          -Darguments=-Dgpg.passphraseServerId=gpg.passphrase \
+          -DreleaseVersion=${{ inputs.releaseVersion }} \
+          -DdevelopmentVersion=${{ inputs.developmentVersion }} \
+          -Dresume=false
+      env:
+        MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+
+    - name: Perform release to Maven Central
+      id: release
+      run: |
+        mvn -B -U \
+          -Prelease \
+          release:perform \
+          -Dgoals="deploy site" \
+          -DworkingDirectory=$GITHUB_WORKSPACE/target/release \
+          -Dgpg.passphraseServerId=gpg.passphrase \
+          -Darguments=-Dgpg.passphraseServerId=gpg.passphrase \
+          -DreleaseVersion=${{ inputs.releaseVersion }} \
+          -DdevelopmentVersion=${{ inputs.developmentVersion }} \
+      env:
+        AUTO_RELEASE_AFTER_CLOSE: ${{ inputs.autoRelease }}
+        MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+
+    - name: Release rollback on failure
+      run: |
+        mvn -B -U \
+          -Prelease \
+          release:rollback \
+      if: always() && (steps.prepare.outcome == 'failure' || steps.release.outcome == 'failure')
+
+    - name: Upload Maven Site to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./target/release/target/site
+
+    - name: Create a GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ env.tagName }}
+        fail_on_unmatched_files: false
+        generate_release_notes: true
+        files: |
+          ./target/release/target/*.jar
+          ./target/release/target/*.buildinfo
+
+    - name: Summary with staging repositories and buildinfo
+      id: stagingList
+      run: |
+        echo "# Staging Repositories" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        mvn -B -U \
+          -Prelease \
+          org.sonatype.plugins:nexus-staging-maven-plugin:rc-list >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        echo "# Buildinfo" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        cat target/*.buildinfo >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+      env:
+        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+
+    - name: Create Pull Request from ${{ needs.release.outputs.branchName }} to ${{ github.event.repository.default_branch }}
+      uses: devops-infra/action-pull-request@v0.5.5
+      with:
+        github_token: ${{ github.token }}
+        source_branch: ${{ needs.release.outputs.branchName }}
+        target_branch: ${{ github.event.repository.default_branch }}
+        title: Release v${{ inputs.releaseVersion }} and prepare v${{ inputs.developmentVersion }}
+        body: |
+          ## Automated release
+          
+          * Release **v${{ inputs.releaseVersion }}**
+          * Prepare **v${{ inputs.developmentVersion }}**
+        label: automatic
+        get_diff: true
+        allow_no_diff: true
+
+  # Deployment job
+  deploy:
+    name: Deploy GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
