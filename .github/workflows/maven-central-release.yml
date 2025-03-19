@@ -184,23 +184,6 @@ jobs:
           ./target/release/target/*.jar
           ./target/release/target/*.buildinfo
 
-    - name: Summary with staging repositories and buildinfo
-      id: stagingList
-      run: |
-        echo "# Staging Repositories" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        mvn -B -U \
-          -Prelease \
-          org.sonatype.plugins:nexus-staging-maven-plugin:rc-list >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        echo "# Buildinfo" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        cat target/*.buildinfo >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-      env:
-        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
-        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-
     - name: Create Pull Request from ${{ needs.release.outputs.branchName }} to ${{ github.event.repository.default_branch }}
       uses: devops-infra/action-pull-request@v0.5.5
       with:
