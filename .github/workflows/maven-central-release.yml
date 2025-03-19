@@ -86,8 +86,8 @@ jobs:
         java-package: jdk
         cache: maven
         server-id: central
-        server-username: MAVEN_CENTRAL_TOKEN
-        server-password: MAVEN_CENTRAL_USERNAME
+        server-username: MAVEN_CENTRAL_USERNAME
+        server-password: MAVEN_CENTRAL_TOKEN
         gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
         gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
