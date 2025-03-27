@@ -49,7 +49,7 @@ permissions:
 
 jobs:
   build:
-    uses: sentrysoftware/workflows/.github/workflows/maven-build.yml@main
+    uses: sentrysoftware/workflows/.github/workflows/maven-build.yml@metricshub
     with:
       mavenPhases: ${{ inputs.mavenPhases }}
       jdkVersion: ${{ inputs.jdkVersion }}
