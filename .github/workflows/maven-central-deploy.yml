@@ -15,6 +15,11 @@ name: Maven Deploy to Maven Central
 on:
   workflow_call:
     inputs:
+      mavenOptions:
+        type: string
+        description: "Maven options to pass to the deploy command"
+        required: false
+        default: ""
       jdkVersion:
         type: string
         description: "Version of the JDK to setup and use"
@@ -58,11 +63,11 @@ jobs:
       if: ${{ inputs.nodeVersion != '' }}
 
     - name: Build and deploy to Maven Central
-      run: mvn -B deploy --file pom.xml
+      run: mvn -B deploy --file pom.xml ${{ inputs.mavenOptions }}
       env:
         MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
         MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
-        
+
     # Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
     - name: Update dependency graph
       uses: advanced-security/maven-dependency-submission-action@4f64ddab9d742a4806eeb588d238e4c311a8397d
