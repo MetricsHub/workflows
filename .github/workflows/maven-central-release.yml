@@ -76,7 +76,7 @@ jobs:
     
     steps:
     
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up JDK ${{ inputs.jdkVersion }} with Maven Central Repository
       uses: actions/setup-java@v4
