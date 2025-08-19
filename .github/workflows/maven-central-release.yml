@@ -185,7 +185,7 @@ jobs:
           ./target/release/target/*.buildinfo
 
     - name: Create Pull Request from ${{ needs.release.outputs.branchName }} to ${{ github.event.repository.default_branch }}
-      uses: devops-infra/action-pull-request@v0.6.0
+      uses: devops-infra/action-pull-request@v0.6.1
       with:
         github_token: ${{ github.token }}
         source_branch: ${{ needs.release.outputs.branchName }}
