@@ -79,7 +79,7 @@ jobs:
     - uses: actions/checkout@v5
     
     - name: Set up JDK ${{ inputs.jdkVersion }} with Maven Central Repository
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: ${{ inputs.jdkVersion }}
         distribution: temurin
