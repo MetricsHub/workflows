@@ -170,7 +170,7 @@ jobs:
       if: always() && (steps.prepare.outcome == 'failure' || steps.release.outcome == 'failure')
 
     - name: Upload Maven Site to GitHub Pages
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v4
       with:
         path: ./target/release/target/site
 
