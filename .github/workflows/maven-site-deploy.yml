@@ -26,6 +26,6 @@ concurrency:
 jobs:
   # Build the site with Maven
   build:
-    uses: sentrysoftware/workflows/.github/workflows/maven-site-deploy.yml@main
+    uses: sentrysoftware/workflows/.github/workflows/maven-site-deploy.yml@v5
     with:
       jdkVersion: ${{ inputs.jdkVersion }}
