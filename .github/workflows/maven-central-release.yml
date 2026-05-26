@@ -175,7 +175,7 @@ jobs:
         path: ./target/release/target/site
 
     - name: Create a GitHub Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ env.tagName }}
         fail_on_unmatched_files: false
