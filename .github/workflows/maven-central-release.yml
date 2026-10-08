@@ -144,6 +144,12 @@ jobs:
         MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
         MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
 
+    # central-publishing-maven-plugin 0.11.0 stages the artifacts with the maven-compat ArtifactInstaller. With
+    # Maven 3.10, that install also writes maven-metadata-local.xml (group/artifact level), _remote.repositories and
+    # .locks into the staging directory, and Central rejects the bundle ("Bundle has content that does NOT have a
+    # .pom file"). In the forked release build only, disable the versions metadata generator and the enhanced local
+    # repository manager (a NaN priority disables a Resolver component), and use in-JVM locks. The bundle then holds
+    # only the artifacts, as with Maven 3.9 (which accepts these properties too).
     - name: Perform release to Maven Central
       id: release
       run: |
@@ -153,7 +159,7 @@ jobs:
           -Dgoals="deploy site" \
           -DworkingDirectory=$GITHUB_WORKSPACE/target/release \
           -Dgpg.passphraseServerId=gpg.passphrase \
-          -Darguments=-Dgpg.passphraseServerId=gpg.passphrase \
+          -Darguments="-Dgpg.passphraseServerId=gpg.passphrase -Daether.priority.VersionsMetadataGeneratorFactory=NaN -Daether.priority.EnhancedLocalRepositoryManagerFactory=NaN -Daether.syncContext.named.factory=rwlock-local" \
           -DreleaseVersion=${{ inputs.releaseVersion }} \
           -DdevelopmentVersion=${{ inputs.developmentVersion }} \
       env:
