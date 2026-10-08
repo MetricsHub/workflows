@@ -9,3 +9,8 @@ updates:
   directory: "/"
   schedule:
     interval: "daily"
+  # Group all GitHub Actions version updates into a single pull request
+  groups:
+    github-actions:
+      patterns:
+        - "*"
