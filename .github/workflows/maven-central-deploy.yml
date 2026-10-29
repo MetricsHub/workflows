@@ -50,7 +50,7 @@ jobs:
         cache: maven
 
     - name: Set up Maven settings.xml
-      uses: s4u/maven-settings-action@v4.0.0
+      uses: s4u/maven-settings-action@v4.1.0
       with:
         servers: '[{"id": "central", "username": "${env.MAVEN_CENTRAL_USERNAME}", "password": "${env.MAVEN_CENTRAL_TOKEN}"}]'
         sonatypeSnapshots: true
@@ -80,4 +80,4 @@ jobs:
 
     # Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
     - name: Update dependency graph
-      uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8
+      uses: advanced-security/maven-dependency-submission-action@a64327a7329c9939cf675e458452febe1894a70c
