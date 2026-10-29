@@ -65,6 +65,16 @@ jobs:
               "releases": { "enabled": true }
             }
           ]
+        pluginRepositories: |
+          [
+            {
+              "id": "metricshub",
+              "name": "metricshub-repository",
+              "url": "https://repo.metricshub.com/repository/maven-public",
+              "snapshots": { "enabled": true },
+              "releases": { "enabled": true }
+            }
+          ]
         servers: |
           [
             {

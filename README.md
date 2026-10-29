@@ -349,7 +349,7 @@ If the code needs to be updated, you will need to push changes to the `main` bra
 
 The `maven-metricshub-build.yml`, `maven-metricshub-deploy.yml` and `maven-metricshub-release.yml` workflows are the counterparts of `maven-build.yml`, `maven-central-deploy.yml` and `maven-central-release.yml` for projects published to the MetricsHub Nexus repository instead of Maven Central:
 
-* Dependencies, including MetricsHub *SNAPSHOT* versions, are resolved from `https://repo.metricshub.com/repository/maven-public`.
+* Dependencies and plugins, including MetricsHub *SNAPSHOT* versions and the MetricsHub Maven plugins, are resolved from `https://repo.metricshub.com/repository/maven-public`.
 * Artifacts are deployed to the repositories declared in the `distributionManagement` of the project.
 * The release is published immediately (there is no staging repository to release), artifacts are still signed with GPG, and the Maven Site is still deployed to GitHub Pages.
 
@@ -393,7 +393,7 @@ Replace the workflows used in `build.yml`, `deploy.yml` and `release.yml` (see t
 ```yaml
 jobs:
   build:
-    uses: metricshub/workflows/.github/workflows/maven-metricshub-build.yml@v9
+    uses: metricshub/workflows/.github/workflows/maven-metricshub-build.yml@v10
     with:
       jdkVersion: "17"
     secrets: inherit
@@ -402,7 +402,7 @@ jobs:
 ```yaml
 jobs:
   deploy:
-    uses: metricshub/workflows/.github/workflows/maven-metricshub-deploy.yml@v9
+    uses: metricshub/workflows/.github/workflows/maven-metricshub-deploy.yml@v10
     with:
       jdkVersion: "17"
     secrets: inherit
@@ -411,7 +411,7 @@ jobs:
 ```yaml
 jobs:
   release:
-    uses: metricshub/workflows/.github/workflows/maven-metricshub-release.yml@v9
+    uses: metricshub/workflows/.github/workflows/maven-metricshub-release.yml@v10
     with:
       releaseVersion: ${{ inputs.releaseVersion }}
       developmentVersion: ${{ inputs.developmentVersion }}
