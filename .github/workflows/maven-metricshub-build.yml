@@ -1,0 +1,139 @@
+# Build with Maven, resolving dependencies (including SNAPSHOTs) from repo.metricshub.com
+#
+# Requirements:
+#
+# - REPO_METRICSHUB_USERNAME secret (at the repository or organization level)
+# - REPO_METRICSHUB_TOKEN secret
+
+name: Maven Build with repo.metricshub.com
+
+on:
+  workflow_call:
+    inputs:
+      mavenPhases:
+        type: string
+        description: "Maven phases to execute"
+        required: false
+        default: "verify site"
+      jdkVersion:
+        type: string
+        description: "Version of the JDK to setup and use"
+        required: false
+        default: "17"
+      nodeVersion:
+        type: string
+        description: "Version of Node.js to setup and use (if needed)"
+        required: false
+        default: ""
+      debug:
+        type: string
+        description: "Enable Maven debug"
+        required: false
+        default: "false"
+      ssh:
+        type: string
+        description: "Enable SSH session to the runner"
+        required: false
+        default: "false"
+      uploadCheckstyleReport:
+        type: string
+        description: "Enable the upload of any Checkstyle report created by Maven"
+        default: "true"
+      uploadPMDReport:
+        type: string
+        description: "Enable the upload of any PMD report created by Maven"
+        default: "true"
+      uploadSpotbugsReport:
+        type: string
+        description: "Enable the upload of any Spotbugs report created by Maven"
+        default: "true"
+
+permissions:
+  # This is required for report upload
+  checks: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up JDK ${{ inputs.jdkVersion }}
+      uses: actions/setup-java@v6
+      with:
+        java-version: ${{ inputs.jdkVersion }}
+        distribution: temurin
+        java-package: jdk
+        cache: maven
+        overwrite-settings: false
+
+    - name: Set up Maven settings.xml
+      uses: s4u/maven-settings-action@v4.1.0
+      with:
+        override: true
+        repositories: |
+          [
+            {
+              "id": "metricshub",
+              "name": "metricshub-repository",
+              "url": "https://repo.metricshub.com/repository/maven-public",
+              "snapshots": { "enabled": true },
+              "releases": { "enabled": true }
+            }
+          ]
+        servers: |
+          [
+            {
+              "id": "metricshub",
+              "username": "${env.REPO_METRICSHUB_USERNAME}",
+              "password": "${env.REPO_METRICSHUB_TOKEN}"
+            }
+          ]
+
+    - name: Setup Node.js ${{ inputs.nodeVersion }}
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.nodeVersion }}
+        cache: npm
+      if: ${{ inputs.nodeVersion != '' }}
+
+    - name: Setup tmate SSH session
+      uses: mxschmitt/action-tmate@v3
+      if: ${{ inputs.ssh == 'true' }}
+      with:
+        detached: true
+        sudo: false
+
+    - name: Configure Maven debug flag
+      run: echo "debugFlag=--debug" >> $GITHUB_ENV
+      if: ${{ inputs.debug == 'true' || runner.debug == '1' }}
+
+    - name: Build with Maven
+      run: mvn ${{ env.debugFlag }} --batch-mode --file pom.xml clean ${{ inputs.mavenPhases }}
+      env:
+        REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
+        REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
+
+    - name: Attach Maven artifacts to the build
+      uses: sentrysoftware/upload-buildinfo-outputs@v3
+
+    - name: Upload Checkstyle reports to GitHub
+      uses: jwgmeligmeyling/checkstyle-github-action@v1.2
+      if: ${{ inputs.uploadCheckstyleReport == 'true' }}
+      with:
+        path: "**/checkstyle-result.xml"
+
+    - name: Upload Spotbugs reports to GitHub
+      uses: jwgmeligmeyling/spotbugs-github-action@v1.2
+      if: ${{ inputs.uploadSpotbugsReport == 'true' }}
+      with:
+        path: "**/spotbugsXml.xml"
+
+    - name: Upload PMD reports to GitHub
+      uses: jwgmeligmeyling/pmd-github-action@v1.2
+      if: ${{ inputs.uploadPMDReport == 'true' }}
+      with:
+        path: "**/pmd.xml"
