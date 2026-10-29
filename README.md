@@ -393,7 +393,7 @@ Replace the workflows used in `build.yml`, `deploy.yml` and `release.yml` (see t
 ```yaml
 jobs:
   build:
-    uses: metricshub/workflows/.github/workflows/maven-metricshub-build.yml@v9
+    uses: metricshub/workflows/.github/workflows/maven-metricshub-build.yml@v10
     with:
       jdkVersion: "17"
     secrets: inherit
@@ -402,7 +402,7 @@ jobs:
 ```yaml
 jobs:
   deploy:
-    uses: metricshub/workflows/.github/workflows/maven-metricshub-deploy.yml@v9
+    uses: metricshub/workflows/.github/workflows/maven-metricshub-deploy.yml@v10
     with:
       jdkVersion: "17"
     secrets: inherit
@@ -411,7 +411,7 @@ jobs:
 ```yaml
 jobs:
   release:
-    uses: metricshub/workflows/.github/workflows/maven-metricshub-release.yml@v9
+    uses: metricshub/workflows/.github/workflows/maven-metricshub-release.yml@v10
     with:
       releaseVersion: ${{ inputs.releaseVersion }}
       developmentVersion: ${{ inputs.developmentVersion }}
