@@ -26,6 +26,10 @@ This repository provides common workflows to be [used as GitHub Actions](https:/
       - [Failure during *Perform Release*](#failure-during-perform-release)
       - [Failures with GitHub Pages](#failures-with-github-pages)
       - [Retrying a release](#retrying-a-release)
+  - [repo.metricshub.com Build, Deploy and Release](#repometricshubcom-build-deploy-and-release)
+    - [Requirements](#requirements-2)
+    - [How to use them?](#how-to-use-them)
+    - [Retrying a release](#retrying-a-release-1)
 
 ## Maven Build
 
@@ -340,3 +344,86 @@ The GitHub repository must be [configured to publish *GitHub Pages* through *Git
 In case of a release failure that doesn't require updating the code, you can simply restart the workflow. The `release/vX.Y.Z` branch and the `vX.Y.Z` tag will be reset properly by the workflow, so you don't have to worry about these.
 
 If the code needs to be updated, you will need to push changes to the `main` branch (from which the release workflow is executed). **Don't use `bugfix/` branches on the `release/vX.Y.Z` branch**. Then re-execute the release workflow from the updated `main` branch.
+
+## repo.metricshub.com Build, Deploy and Release
+
+The `maven-metricshub-build.yml`, `maven-metricshub-deploy.yml` and `maven-metricshub-release.yml` workflows are the counterparts of `maven-build.yml`, `maven-central-deploy.yml` and `maven-central-release.yml` for projects published to the MetricsHub Nexus repository instead of Maven Central:
+
+* Dependencies, including MetricsHub *SNAPSHOT* versions, are resolved from `https://repo.metricshub.com/repository/maven-public`.
+* Artifacts are deployed to the repositories declared in the `distributionManagement` of the project.
+* The release is published immediately (there is no staging repository to release), artifacts are still signed with GPG, and the Maven Site is still deployed to GitHub Pages.
+
+They take the same inputs as their Maven Central counterparts, except `autoRelease`, which doesn't exist (`maven-metricshub-release.yml` also accepts `mavenOptions`).
+
+### Requirements
+
+The below secrets must be declared in the GitHub repository or the GitHub organization:
+
+| Secret | Description |
+|---|---|
+| `REPO_METRICSHUB_USERNAME` | Username to connect to `repo.metricshub.com` |
+| `REPO_METRICSHUB_TOKEN` | The corresponding password or token |
+| `MAVEN_GPG_PRIVATE_KEY` | The GPG private key to sign the artifacts (release only) |
+| `MAVEN_GPG_PASSPHRASE` | The associated passphrase (release only) |
+
+The `pom.xml` must use the `metricshub` server id in its `distributionManagement`, so that Maven sends the credentials above:
+
+```xml
+  <distributionManagement>
+    <repository>
+      <id>metricshub</id>
+      <url>https://repo.metricshub.com/repository/maven-oss-releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>metricshub</id>
+      <url>https://repo.metricshub.com/repository/maven-oss-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
+```
+
+The `release` profile described in [Maven Central Release](#requirements-1) is required as well.
+
+> [!NOTE]
+> These workflows don't define the `MAVEN_CENTRAL_TOKEN` environment variable, so the `maven-central` profile of `org.metricshub:oss-parent` stays inactive.
+
+### How to use them?
+
+Replace the workflows used in `build.yml`, `deploy.yml` and `release.yml` (see the examples above), and keep `secrets: inherit` on all of them, including the build:
+
+```yaml
+jobs:
+  build:
+    uses: metricshub/workflows/.github/workflows/maven-metricshub-build.yml@v9
+    with:
+      jdkVersion: "17"
+    secrets: inherit
+```
+
+```yaml
+jobs:
+  deploy:
+    uses: metricshub/workflows/.github/workflows/maven-metricshub-deploy.yml@v9
+    with:
+      jdkVersion: "17"
+    secrets: inherit
+```
+
+```yaml
+jobs:
+  release:
+    uses: metricshub/workflows/.github/workflows/maven-metricshub-release.yml@v9
+    with:
+      releaseVersion: ${{ inputs.releaseVersion }}
+      developmentVersion: ${{ inputs.developmentVersion }}
+      jdkVersion: "17"
+    secrets: inherit
+```
+
+> [!IMPORTANT]
+> GitHub doesn't pass secrets to workflows triggered by pull requests from forks, so the build of such pull requests can't authenticate to `repo.metricshub.com`.
+
+### Retrying a release
+
+The release repository doesn't accept redeploying an artifact that already exists. If *Perform Release* failed **before** any artifact was deployed, simply restart the workflow, as described in [Retrying a release](#retrying-a-release).
+
+If some artifacts of the version were already deployed (partial publication), either delete the components of this version in `repo.metricshub.com` before restarting the workflow, or release the next version instead.
